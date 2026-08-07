@@ -7,13 +7,6 @@ locals {
       Project     = "finops-banking-platform"
     }
   )
-
-  # IRSA roles need the OIDC provider, which only exists after the EKS
-  # cluster is created. On the FIRST apply (cluster + node roles only),
-  # leave oidc_provider_arn/url blank so this count evaluates to 0.
-  # After the EKS module creates the cluster, re-apply with those values
-  # filled in to create the per-domain IRSA roles.
-  create_irsa_roles = var.oidc_provider_arn != "" && var.oidc_provider_url != ""
 }
 
 # ---- EKS Cluster Role ----
@@ -69,11 +62,14 @@ resource "aws_iam_role_policy_attachment" "ecr_read_only" {
 }
 
 # ---- Per-domain IRSA roles (accounts, payments, risk, etc.) ----
-# Each microservice domain gets its own scoped role instead of sharing the
-# node role - so payment-gateway-service can eventually get different AWS
-# permissions than notification-service. Applied only after OIDC exists.
+# for_each keys off var.service_domains directly (static, known at plan
+# time). The OIDC arn/url used INSIDE the trust policy are allowed to be
+# "known after apply" - only the for_each KEY SET must be knowable upfront.
+# This is what fixes the "Invalid for_each argument" error: the previous
+# version tried to gate the key set itself on module.eks's output, which
+# doesn't exist until the cluster is created.
 resource "aws_iam_role" "domain_irsa" {
-  for_each = local.create_irsa_roles ? toset(var.service_domains) : toset([])
+  for_each = toset(var.service_domains)
 
   name = "${var.environment}-${each.value}-domain-irsa-role"
 
@@ -98,7 +94,7 @@ resource "aws_iam_role" "domain_irsa" {
 # Baseline policy per domain - CloudWatch Logs + read-only S3 for now.
 # Tighten or extend per domain as each service's real needs become clear.
 resource "aws_iam_role_policy" "domain_baseline" {
-  for_each = local.create_irsa_roles ? toset(var.service_domains) : toset([])
+  for_each = toset(var.service_domains)
 
   name = "${each.value}-baseline-policy"
   role = aws_iam_role.domain_irsa[each.value].id
