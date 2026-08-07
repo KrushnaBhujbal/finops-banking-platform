@@ -27,16 +27,6 @@ variable "enable_vpc_endpoints" {
   default = true
 }
 
-variable "oidc_provider_arn" {
-  type    = string
-  default = ""
-}
-
-variable "oidc_provider_url" {
-  type    = string
-  default = ""
-}
-
 variable "service_domains" {
   type    = list(string)
   default = ["accounts", "payments", "risk", "notifications", "reporting", "platform"]
@@ -48,4 +38,32 @@ variable "common_tags" {
     Owner   = "krushna"
     Project = "finops-banking-platform"
   }
+}
+
+# ---- EKS ----
+variable "kubernetes_version" {
+  type    = string
+  default = "1.30"
+}
+
+variable "node_instance_types" {
+  description = "Playground allows only t2/t3 nano-micro-small-medium"
+  type        = list(string)
+  default     = ["t3.small"]
+}
+
+variable "node_desired_size" {
+  type    = number
+  default = 2
+}
+
+variable "node_min_size" {
+  type    = number
+  default = 1
+}
+
+variable "node_max_size" {
+  description = "Playground hard cap: 3 nodes per node group"
+  type        = number
+  default     = 3
 }
