@@ -18,7 +18,7 @@ locals {
 
 # ---- EKS Cluster Role ----
 resource "aws_iam_role" "eks_cluster" {
-  name = "${var.environment}-${var.cluster_name}-cluster-role"
+  name = var.cluster_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -39,7 +39,7 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
 
 # ---- EKS Node Group Role ----
 resource "aws_iam_role" "eks_nodes" {
-  name = "${var.environment}-${var.cluster_name}-node-role"
+  name = var.node_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
