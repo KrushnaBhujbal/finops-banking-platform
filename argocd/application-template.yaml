@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: __SERVICE_NAME__
+  namespace: argocd
+spec:
+  project: __DOMAIN__
+  source:
+    repoURL: __REPO_URL__
+    targetRevision: main
+    path: helm/charts/generic-microservice
+    helm:
+      valueFiles:
+        - "../../values/__ENV__/__SERVICE_NAME__.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: __DOMAIN__
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

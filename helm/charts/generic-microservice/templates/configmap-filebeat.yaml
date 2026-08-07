@@ -1,0 +1,21 @@
+{{- if .Values.sidecar.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.serviceName }}-filebeat-config
+data:
+  filebeat.yml: |
+    filebeat.inputs:
+      - type: container
+        paths:
+          - /var/log/containers/*{{ .Values.serviceName }}*.log
+        processors:
+          - add_fields:
+              target: ""
+              fields:
+                service: {{ .Values.serviceName }}
+                domain: {{ .Values.serviceDomain }}
+                environment: {{ .Values.environment }}
+    output.logstash:
+      hosts: ["logstash.observability.svc.cluster.local:5044"]
+{{- end }}

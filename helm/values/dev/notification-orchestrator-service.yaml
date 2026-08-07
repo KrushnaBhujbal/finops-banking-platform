@@ -1,0 +1,12 @@
+serviceName: notification-orchestrator-service
+serviceDomain: notifications
+environment: dev
+
+image:
+  repository: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/notification-orchestrator-service
+  tag: latest
+
+# tweak per service to create realistic SLI variation across the fleet
+errorRate: "0.02"
+minLatencyMs: "20"
+maxLatencyMs: "180"

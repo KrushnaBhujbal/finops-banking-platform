@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.serviceName }}
+  labels:
+    app: {{ .Values.serviceName }}
+    domain: {{ .Values.serviceDomain }}
+    environment: {{ .Values.environment }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.serviceName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.serviceName }}
+        domain: {{ .Values.serviceDomain }}
+        environment: {{ .Values.environment }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.port }}"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: {{ .Values.serviceName }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.port }}
+          env:
+            - name: SERVICE_NAME
+              value: "{{ .Values.serviceName }}"
+            - name: SERVICE_DOMAIN
+              value: "{{ .Values.serviceDomain }}"
+            - name: ENVIRONMENT
+              value: "{{ .Values.environment }}"
+            - name: ERROR_RATE
+              value: "{{ .Values.errorRate }}"
+            - name: MIN_LATENCY_MS
+              value: "{{ .Values.minLatencyMs }}"
+            - name: MAX_LATENCY_MS
+              value: "{{ .Values.maxLatencyMs }}"
+            - name: PORT
+              value: "{{ .Values.port }}"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.livenessProbe.path }}
+              port: {{ .Values.port }}
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessProbe.path }}
+              port: {{ .Values.port }}
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+        {{- if .Values.sidecar.enabled }}
+        - name: filebeat-sidecar
+          image: "{{ .Values.sidecar.image }}"
+          args: ["-c", "/etc/filebeat.yml", "-e"]
+          volumeMounts:
+            - name: filebeat-config
+              mountPath: /etc/filebeat.yml
+              subPath: filebeat.yml
+        {{- end }}
+      {{- if .Values.sidecar.enabled }}
+      volumes:
+        - name: filebeat-config
+          configMap:
+            name: {{ .Values.serviceName }}-filebeat-config
+      {{- end }}

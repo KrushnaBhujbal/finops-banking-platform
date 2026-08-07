@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rate-limiter-service
+  namespace: argocd
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/KrushnaBhujbal/finops-banking-platform.git
+    targetRevision: main
+    path: helm/charts/generic-microservice
+    helm:
+      valueFiles:
+        - "../../values/dev/rate-limiter-service.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: platform
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

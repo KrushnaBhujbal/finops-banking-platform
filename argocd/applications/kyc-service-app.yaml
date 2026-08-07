@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyc-service
+  namespace: argocd
+spec:
+  project: accounts
+  source:
+    repoURL: https://github.com/KrushnaBhujbal/finops-banking-platform.git
+    targetRevision: main
+    path: helm/charts/generic-microservice
+    helm:
+      valueFiles:
+        - "../../values/dev/kyc-service.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: accounts
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
