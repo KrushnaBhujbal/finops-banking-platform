@@ -19,7 +19,7 @@ node_max_size       = 3
 # instead (Fargate profile limits are explicitly documented in the
 # playground's allowed-services list, unlike node groups).
 create_node_group       = false
-create_fargate_profiles = true
+create_fargate_profiles = false
 fargate_namespaces      = ["kube-system", "default"]
 
 common_tags = {
