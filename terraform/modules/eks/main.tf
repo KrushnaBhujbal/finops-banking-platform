@@ -39,13 +39,11 @@ resource "aws_iam_openid_connect_provider" "eks" {
   tags = local.common_tags
 }
 
-# ---- Managed Node Group ----
-# Optional via create_node_group: the playground consistently denies
-# eks:CreateNodegroup via the API/CLI regardless of account. When that
-# happens, set create_node_group = false, apply everything else via
-# Terraform, then create the node group manually through the EKS console
-# (console actions appear to run through a different, more permissive
-# path than programmatic API calls on this playground).
+# ---- Managed Node Group (kept for reference - blocked on this playground) ----
+# eks:CreateNodegroup is denied for this identity via BOTH the API/CLI and
+# the AWS console (confirmed with identical error messages both ways).
+# create_node_group defaults to false. Using Fargate as the compute layer
+# instead - see below.
 resource "aws_eks_node_group" "main" {
   count = var.create_node_group ? 1 : 0
 
@@ -56,7 +54,7 @@ resource "aws_eks_node_group" "main" {
 
   instance_types = var.node_instance_types
   ami_type       = "AL2023_x86_64_STANDARD"
-  capacity_type  = "ON_DEMAND" # playground doc: no Spot Instances allowed
+  capacity_type  = "ON_DEMAND"
 
   scaling_config {
     desired_size = var.node_desired_size
@@ -70,6 +68,57 @@ resource "aws_eks_node_group" "main" {
 
   tags = merge(local.common_tags, {
     Name = "${var.environment}-primary-nodes"
+  })
+
+  depends_on = [aws_eks_cluster.main]
+}
+
+# ---- Fargate Pod Execution Role ----
+# Separate trust principal (eks-fargate-pods.amazonaws.com) and separate
+# managed policy from the node role - required even though node groups
+# aren't in use, because Fargate pods still need something to assume.
+resource "aws_iam_role" "fargate_pod_execution" {
+  count = var.create_fargate_profiles ? 1 : 0
+
+  name = "${var.environment}-${var.cluster_name}-fargate-pod-execution-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "eks-fargate-pods.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "fargate_pod_execution" {
+  count = var.create_fargate_profiles ? 1 : 0
+
+  role       = aws_iam_role.fargate_pod_execution[0].name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy"
+}
+
+# ---- Fargate Profiles ----
+# One profile per namespace in var.fargate_namespaces. kube-system is
+# required for CoreDNS to schedule (otherwise DNS never comes up). Playground
+# hard cap: 3 Fargate profiles per cluster - keep fargate_namespaces short.
+resource "aws_eks_fargate_profile" "main" {
+  for_each = var.create_fargate_profiles ? toset(var.fargate_namespaces) : toset([])
+
+  cluster_name           = aws_eks_cluster.main.name
+  fargate_profile_name   = "${var.environment}-${each.value}-fargate"
+  pod_execution_role_arn = aws_iam_role.fargate_pod_execution[0].arn
+  subnet_ids              = var.private_subnet_ids
+
+  selector {
+    namespace = each.value
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${var.environment}-${each.value}-fargate"
   })
 
   depends_on = [aws_eks_cluster.main]

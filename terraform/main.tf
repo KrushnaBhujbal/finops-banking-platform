@@ -29,6 +29,9 @@ module "eks" {
   node_max_size       = var.node_max_size
   create_node_group   = var.create_node_group
 
+  create_fargate_profiles = var.create_fargate_profiles
+  fargate_namespaces      = var.fargate_namespaces
+
   tags = var.common_tags
 }
 

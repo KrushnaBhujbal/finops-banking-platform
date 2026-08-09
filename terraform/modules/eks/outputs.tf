@@ -19,10 +19,14 @@ output "oidc_provider_url" {
 }
 
 output "node_group_status" {
-  value = var.create_node_group ? aws_eks_node_group.main[0].status : "not managed by terraform - created manually via console, see docs/runbooks"
+  value = var.create_node_group ? aws_eks_node_group.main[0].status : "not created - eks:CreateNodegroup blocked on this playground (confirmed via API and console)"
+}
+
+output "fargate_profile_names" {
+  value = var.create_fargate_profiles ? [for p in aws_eks_fargate_profile.main : p.fargate_profile_name] : []
 }
 
 output "vpc_config_subnet_ids" {
-  description = "Subnet IDs the cluster is using - copy these if creating the node group manually via console"
+  description = "Subnet IDs the cluster is using"
   value       = concat(var.private_subnet_ids, var.public_subnet_ids)
 }

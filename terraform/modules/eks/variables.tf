@@ -22,7 +22,7 @@ variable "vpc_id" {
 }
 
 variable "private_subnet_ids" {
-  description = "Subnets where worker nodes run"
+  description = "Subnets where worker nodes / Fargate pods run"
   type        = list(string)
 }
 
@@ -60,9 +60,22 @@ variable "node_max_size" {
 }
 
 variable "create_node_group" {
-  description = "Set false when eks:CreateNodegroup is blocked by the playground's identity policy - create the node group manually via the AWS console instead, and flip this back to true (with an import) once you want Terraform to manage it."
+  description = "Set false when eks:CreateNodegroup is blocked (confirmed blocked on this playground, console included). Use Fargate instead."
+  type        = bool
+  default     = false
+}
+
+# ---- Fargate (compute alternative since EC2 node groups are blocked) ----
+variable "create_fargate_profiles" {
+  description = "Create Fargate profiles as the compute layer instead of a managed node group"
   type        = bool
   default     = true
+}
+
+variable "fargate_namespaces" {
+  description = "Namespaces that get scheduled onto Fargate. kube-system is required so CoreDNS can run. Playground hard cap: 3 Fargate profiles per cluster."
+  type        = list(string)
+  default     = ["kube-system", "default"]
 }
 
 variable "tags" {

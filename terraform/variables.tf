@@ -69,7 +69,19 @@ variable "node_max_size" {
 }
 
 variable "create_node_group" {
-  description = "Set false when the playground blocks eks:CreateNodegroup via API - create manually via console instead"
+  description = "eks:CreateNodegroup is blocked on this playground - keep false, use Fargate instead"
+  type        = bool
+  default     = false
+}
+
+variable "create_fargate_profiles" {
+  description = "Create Fargate profiles as the compute layer instead of an EC2 node group"
   type        = bool
   default     = true
+}
+
+variable "fargate_namespaces" {
+  description = "Namespaces scheduled onto Fargate. Playground hard cap: 3 profiles per cluster."
+  type        = list(string)
+  default     = ["kube-system", "default"]
 }

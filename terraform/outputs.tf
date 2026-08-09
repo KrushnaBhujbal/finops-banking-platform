@@ -10,6 +10,10 @@ output "node_group_status" {
   value = module.eks.node_group_status
 }
 
+output "fargate_profile_names" {
+  value = module.eks.fargate_profile_names
+}
+
 output "domain_irsa_role_arns" {
   value = module.iam.domain_irsa_role_arns
 }

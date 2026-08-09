@@ -14,10 +14,13 @@ node_desired_size   = 2
 node_min_size       = 1
 node_max_size       = 3
 
-# Playground denies eks:CreateNodegroup via API/CLI consistently (confirmed
-# across 2 separate accounts). Create the node group manually via the EKS
-# console instead - see terraform/SESSION4-NODEGROUP-WORKAROUND.md.
-create_node_group = false
+# eks:CreateNodegroup is confirmed blocked on this playground - via API AND
+# console, identical error both ways. Using Fargate as the compute layer
+# instead (Fargate profile limits are explicitly documented in the
+# playground's allowed-services list, unlike node groups).
+create_node_group       = false
+create_fargate_profiles = true
+fargate_namespaces      = ["kube-system", "default"]
 
 common_tags = {
   Owner       = "krushna"
