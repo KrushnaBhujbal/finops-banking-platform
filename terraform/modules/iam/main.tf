@@ -62,12 +62,6 @@ resource "aws_iam_role_policy_attachment" "ecr_read_only" {
 }
 
 # ---- Per-domain IRSA roles (accounts, payments, risk, etc.) ----
-# for_each keys off var.service_domains directly (static, known at plan
-# time). The OIDC arn/url used INSIDE the trust policy are allowed to be
-# "known after apply" - only the for_each KEY SET must be knowable upfront.
-# This is what fixes the "Invalid for_each argument" error: the previous
-# version tried to gate the key set itself on module.eks's output, which
-# doesn't exist until the cluster is created.
 resource "aws_iam_role" "domain_irsa" {
   for_each = toset(var.service_domains)
 
@@ -91,13 +85,17 @@ resource "aws_iam_role" "domain_irsa" {
   tags = merge(local.common_tags, { Domain = each.value })
 }
 
-# Baseline policy per domain - CloudWatch Logs + read-only S3 for now.
-# Tighten or extend per domain as each service's real needs become clear.
-resource "aws_iam_role_policy" "domain_baseline" {
+# ---- Baseline permissions, as a CUSTOMER-MANAGED policy + attachment ----
+# Switched from an inline policy (iam:PutRolePolicy) to a managed policy
+# (iam:CreatePolicy) + attachment (iam:AttachRolePolicy) because the
+# playground's identity policy denied PutRolePolicy. AttachRolePolicy is
+# the same action pattern that already succeeded for the node role in
+# Session 2, so this is the more likely path to work here too.
+resource "aws_iam_policy" "domain_baseline" {
   for_each = toset(var.service_domains)
 
-  name = "${each.value}-baseline-policy"
-  role = aws_iam_role.domain_irsa[each.value].id
+  name        = "${var.environment}-${each.value}-baseline-policy"
+  description = "Baseline CloudWatch Logs + S3 read permissions for ${each.value} domain services"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -118,4 +116,13 @@ resource "aws_iam_role_policy" "domain_baseline" {
       }
     ]
   })
+
+  tags = merge(local.common_tags, { Domain = each.value })
+}
+
+resource "aws_iam_role_policy_attachment" "domain_baseline" {
+  for_each = toset(var.service_domains)
+
+  role       = aws_iam_role.domain_irsa[each.value].name
+  policy_arn = aws_iam_policy.domain_baseline[each.value].arn
 }
