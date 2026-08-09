@@ -67,3 +67,9 @@ variable "node_max_size" {
   type        = number
   default     = 3
 }
+
+variable "create_node_group" {
+  description = "Set false when the playground blocks eks:CreateNodegroup via API - create manually via console instead"
+  type        = bool
+  default     = true
+}

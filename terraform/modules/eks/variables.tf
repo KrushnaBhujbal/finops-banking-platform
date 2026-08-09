@@ -59,6 +59,12 @@ variable "node_max_size" {
   default     = 3
 }
 
+variable "create_node_group" {
+  description = "Set false when eks:CreateNodegroup is blocked by the playground's identity policy - create the node group manually via the AWS console instead, and flip this back to true (with an import) once you want Terraform to manage it."
+  type        = bool
+  default     = true
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

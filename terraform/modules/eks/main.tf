@@ -40,8 +40,15 @@ resource "aws_iam_openid_connect_provider" "eks" {
 }
 
 # ---- Managed Node Group ----
-# Sized to playground limits: t2/t3 nano-micro-small-medium only, max 3 nodes.
+# Optional via create_node_group: the playground consistently denies
+# eks:CreateNodegroup via the API/CLI regardless of account. When that
+# happens, set create_node_group = false, apply everything else via
+# Terraform, then create the node group manually through the EKS console
+# (console actions appear to run through a different, more permissive
+# path than programmatic API calls on this playground).
 resource "aws_eks_node_group" "main" {
+  count = var.create_node_group ? 1 : 0
+
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "${var.environment}-primary-nodes"
   node_role_arn   = var.node_role_arn
@@ -65,6 +72,5 @@ resource "aws_eks_node_group" "main" {
     Name = "${var.environment}-primary-nodes"
   })
 
-  # Cluster must exist (with its RBAC/networking ready) before nodes try to join
   depends_on = [aws_eks_cluster.main]
 }

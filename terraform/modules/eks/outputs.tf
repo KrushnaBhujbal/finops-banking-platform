@@ -15,10 +15,14 @@ output "oidc_provider_arn" {
 }
 
 output "oidc_provider_url" {
-  # strip the leading "https://" - IRSA trust policies need the bare URL
   value = replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")
 }
 
 output "node_group_status" {
-  value = aws_eks_node_group.main.status
+  value = var.create_node_group ? aws_eks_node_group.main[0].status : "not managed by terraform - created manually via console, see docs/runbooks"
+}
+
+output "vpc_config_subnet_ids" {
+  description = "Subnet IDs the cluster is using - copy these if creating the node group manually via console"
+  value       = concat(var.private_subnet_ids, var.public_subnet_ids)
 }

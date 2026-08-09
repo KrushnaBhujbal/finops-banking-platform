@@ -85,12 +85,10 @@ resource "aws_iam_role" "domain_irsa" {
   tags = merge(local.common_tags, { Domain = each.value })
 }
 
-# ---- Baseline permissions, as a CUSTOMER-MANAGED policy + attachment ----
-# Switched from an inline policy (iam:PutRolePolicy) to a managed policy
-# (iam:CreatePolicy) + attachment (iam:AttachRolePolicy) because the
-# playground's identity policy denied PutRolePolicy. AttachRolePolicy is
-# the same action pattern that already succeeded for the node role in
-# Session 2, so this is the more likely path to work here too.
+# ---- Baseline permissions, as a customer-managed policy + attachment ----
+# NOTE: tags removed here on purpose - the playground denies iam:TagPolicy
+# even though iam:CreatePolicy itself is allowed. Tagging the ROLE (above)
+# still works fine; it's specifically tagging a POLICY that's blocked.
 resource "aws_iam_policy" "domain_baseline" {
   for_each = toset(var.service_domains)
 
@@ -116,8 +114,6 @@ resource "aws_iam_policy" "domain_baseline" {
       }
     ]
   })
-
-  tags = merge(local.common_tags, { Domain = each.value })
 }
 
 resource "aws_iam_role_policy_attachment" "domain_baseline" {
