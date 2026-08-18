@@ -31,7 +31,7 @@ locals {
 resource "aws_iam_role" "domain_irsa" {
   for_each = toset(var.service_domains)
 
-  name = "${var.environment}-${each.value}-domain-irsa-role"
+  name = "${var.environment}-${each.value}-domain-irsa-role-tg"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -51,12 +51,16 @@ resource "aws_iam_role" "domain_irsa" {
   tags = merge(local.common_tags, { Domain = each.value })
 }
 
-# NOTE: tags omitted here on purpose - playground denies iam:TagPolicy
-# even though iam:CreatePolicy is allowed (discovered in Session 4).
+# NOTE: "-tg" suffix on both the role and policy names below is intentional -
+# an earlier session (non-Terragrunt, single-state) created policies named
+# "dev-<domain>-baseline-policy" that this playground's identity can create
+# but cannot delete (iam:DeletePolicy denied), so those names are permanently
+# occupied in this AWS account. Suffixing avoids an EntityAlreadyExists
+# collision. Tags omitted here too - iam:TagPolicy is also denied.
 resource "aws_iam_policy" "domain_baseline" {
   for_each = toset(var.service_domains)
 
-  name        = "${var.environment}-${each.value}-baseline-policy"
+  name        = "${var.environment}-${each.value}-baseline-policy-tg"
   description = "Baseline CloudWatch Logs + S3 read permissions for ${each.value} domain services"
 
   policy = jsonencode({
